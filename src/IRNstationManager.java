@@ -231,13 +231,6 @@ public class IRNstationManager implements Serializable {
         Vector3i newSystem = GetSystem(newSector).getPos();
         Vector3i oldSystem = GetSystem(oldSector).getPos();
         chatDebug("jump detected. origin system: " + oldSystem + " to system " + newSystem);
-        try {
-            chatDebug("trying to delay jump");
-            event.wait(10000);
-            event.wait();
-        } catch (InterruptedException e) {
-            chatDebug(e.toString());
-        }
         //check if stations list is existant, if not read from file
         if (stations == null || stations.size() == 0) {
             chatDebug("station list is empty/null, reading from file");
