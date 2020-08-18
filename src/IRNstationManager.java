@@ -567,6 +567,16 @@ public class IRNstationManager implements Serializable {
         return -1;
     }
 
+    private List<IRNstationModule> GetFactionsStations (int factionID, List<IRNstationModule> allList) {
+        List<IRNstationModule> list = new ArrayList<>();
+        for (int i = 0; i < allList.size(); i++) {
+            if (allList.get(i).factionID == factionID) {
+                list.add(allList.get(i));
+            }
+        }
+        return list;
+    }
+
     private int systemAlreadyTaken(List<IRNstationModule> list, Vector3i system) {
         /*
             will search list for system, will return index of first match, returns -1 if nothing found
