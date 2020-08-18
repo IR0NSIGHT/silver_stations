@@ -1,5 +1,5 @@
-import api.ModPlayground;
 import org.schema.common.util.linAlg.Vector3i;
+import org.schema.game.common.controller.SegmentController;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 
 import java.io.IOException;
@@ -11,10 +11,12 @@ public class IRNstationModule implements Serializable {
     => represents the ingame spacestation object. is not limited to segmentController or server restarts.
     A class that holds the required values for stationManager with special abilities
     contains anchor stationManager
-    all instances of this class are stored in the IRNstationManagerManager classes list
-    this class gets created, handled and deleted by IRNstationManagerManager
+    all instances of this class are stored in the IRNstationManager classes list
+    this class gets created, handled and deleted by IRNstationManager
+    is serialized and saved by IRN stationmanager
      */
-    private transient IRNstationManager stationManager = null; //link to manager class (central piece)
+    private transient IRNstationManager stationManager; //link to manager class (central piece)
+    private transient SegmentController stationSegmentController;
     public int stationID; public String stationUIDfull; public String stationUID;
     public String stationName;
     public int factionID;
@@ -35,9 +37,9 @@ public class IRNstationModule implements Serializable {
         }
         return stationSystem;
     }
-    public int[] stationSectorArr;
-    public int[] stationSystemArr;
-    private static final long serialVersionUID = 964380174990140560L;  //cp from stackoverflow after lcoal calss imcompaltible error
+    private int[] stationSectorArr;
+    private int[] stationSystemArr;
+    private static final long serialVersionUID = 964380174990140560L;  //cp from game error log, might need to update on version change.
     private int[] V3itoArr(Vector3i thisV) {
         int[] arr = {thisV.x, thisV.y, thisV.z};
         return arr;
@@ -50,34 +52,41 @@ public class IRNstationModule implements Serializable {
     }
     public IRNstationModule(IRNstationManager stationManagerManagerI, SimpleTransformableSendableObject stationI) { //constructor
         stationManager = stationManagerManagerI;
-        stationID = stationI.getId();
+        stationID = stationI.getId(); //TODO why do i have that field?
         factionID = stationI.getFactionId();
         stationName = stationI.getRealName();
         stationUIDfull = stationI.getUniqueIdentifierFull();
         stationUID = stationI.getUniqueIdentifier();
         stationSector = stationI.getSector(new Vector3i());
         stationSystem = stationI.getSystem(new Vector3i());
+        stationSegmentController = (SegmentController) stationI;
 
         stationSectorArr = V3itoArr(stationSector);
         stationSystemArr = V3itoArr(stationSystem);
 
-        stationManager.StationaddStationToFile(this);
+        stationManager.stations.add(this);
+    }
+    public IRNstationModule(IRNstationManager stationManagerManagerI, SegmentController stationI) { //constructor
+        stationManager = stationManagerManagerI;
+        stationID = stationI.getId(); //TODO why do i have that field?
+        factionID = stationI.getFactionId();
+        stationName = stationI.getRealName();
+        stationUIDfull = stationI.getUniqueIdentifierFull();
+        stationUID = stationI.getUniqueIdentifier();
+        stationSector = stationI.getSector(new Vector3i());
+        stationSystem = stationI.getSystem(new Vector3i());
+        stationSegmentController = stationI;
 
-        //this.addChangeListener(new AnchorListener());
-    }
-    public void readObject(java.io.ObjectInputStream stream) throws IOException, ClassNotFoundException {
-        stream.defaultReadObject();
-        stationManager = IRNCore.stations;
-        //ModPlayground.broadcastMessage("read method accessed");
-        stationSystem = ArrtoV3i(stationSectorArr);
-        stationSector = ArrtoV3i(stationSectorArr);
-        //ModPlayground.broadcastMessage("read sector arr " + stationSectorArr);
-        //ModPlayground.broadcastMessage("read system arr " + stationSystemArr);
-        //ModPlayground.broadcastMessage("read sector " + stationSector);
-        //ModPlayground.broadcastMessage("read system " + stationSystem);
-    }
-    public void writeObject(java.io.ObjectOutputStream stream) throws IOException {
-        stream.defaultWriteObject();
+        stationSectorArr = V3itoArr(stationSector);
+        stationSystemArr = V3itoArr(stationSystem);
+
+        stationManager.stations.add(this);
     }
 
+    public void setStationSegmentController(SegmentController sc) {
+        this.stationSegmentController = sc;
+    }
+    public SegmentController getstationSegmentController() {
+        return this.stationSegmentController;
+    }
 }

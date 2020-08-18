@@ -1,40 +1,30 @@
+import Events.EntityLoadedEvent;
 import api.ModPlayground;
 import api.common.GameServer;
 import api.listener.Listener;
 import api.listener.events.SegmentControllerOverheatEvent;
 import api.listener.events.ShipJumpEngageEvent;
-import api.listener.events.player.PlayerChatEvent;
-import api.listener.events.register.ElementRegisterEvent;
-import api.listener.events.register.RegisterAddonsEvent;
 import api.listener.events.systems.InterdictionCheckEvent;
 import api.mod.StarLoader;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
-import it.unimi.dsi.fastutil.shorts.ShortList;
 import org.schema.common.util.linAlg.Vector3i;
-import org.schema.game.client.data.PlayerControllable;
 import org.schema.game.common.controller.SegmentController;
-import org.schema.game.common.controller.elements.VoidElementManager;
-import org.schema.game.common.controller.elements.jumpdrive.JumpAddOn;
 import org.schema.game.common.controller.elements.jumpprohibiter.InterdictionAddOn;
 import org.schema.game.common.data.ManagedSegmentController;
 import org.schema.game.common.data.blockeffects.config.EffectModule;
 import org.schema.game.common.data.blockeffects.config.StatusEffectType;
-import org.schema.game.common.data.blockeffects.config.parameter.StatusEffectParameterType;
 import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import org.schema.game.common.data.world.StellarSystem;
 import org.schema.game.common.data.world.Universe;
 import org.schema.game.server.controller.SectorSwitch;
 import org.schema.game.server.data.GameServerState;
-import org.schema.game.server.data.PlayerNotFountException;
 
 import java.io.*;
 import java.util.*;
 
 public class IRNstationManager implements Serializable {
     /*
-    central manager that creates, stores and handles all station modules
+        central manager that creates, stores and handles all station modules
      */
     public transient List<IRNstationModule> stations = null; //holds all station instances
     public String filePath;
@@ -54,10 +44,21 @@ public class IRNstationManager implements Serializable {
             create listeners for playerchat, interdictionEvent, jumpEvent to detect the events needed
             listeneres will pass event to theri respective event methods
          */
-        StarLoader.registerListener(PlayerChatEvent.class, new Listener<PlayerChatEvent>() {
+        StarLoader.registerListener(EntityLoadedEvent.class, new Listener<EntityLoadedEvent>() {
             @Override
-            public void onEvent(PlayerChatEvent playerChatEvent) {  //playerChat for setting up stations TODO automate through custom reactor addon
-                chatEvent(playerChatEvent);
+            public void onEvent(EntityLoadedEvent event) {
+                if (event.getSegmentController().getType() == SimpleTransformableSendableObject.EntityType.SPACE_STATION) {
+                    //check for existing stationfile
+                    String stationUID = event.getSegmentController().getUniqueIdentifier();
+                    int idx = FindStationInList(stations ,stationUID);
+                    if (idx != -1) { //not yet registered
+                        //create station object
+                        registerIRNstation(event.getSegmentController());
+                    } else { //is registered
+                        //add segment controller to station object
+                        stations.get(idx).setStationSegmentController(event.getSegmentController());
+                    }
+                }
             }
         });
         StarLoader.registerListener(InterdictionCheckEvent.class, new Listener<InterdictionCheckEvent>() {
@@ -78,143 +79,10 @@ public class IRNstationManager implements Serializable {
                 jumpEvent(event);
             }
         });
-        /*
-        StarLoader.registerListener(ElementRegisterEvent.class, new Listener<ElementRegisterEvent>() {
-            @Override
-            public void onEvent(ElementRegisterEvent event) {    //delete destroyed stations from list
-
-                SegmentController ship = event.getSegmentController();
-                chat("ELEMENT REGISTER EVENT FIRED");
-                //get player
-                ship.isConrolledByActivePlayer();
-                PlayerControllable playerShip = (PlayerControllable)ship;
-                if (!playerShip.getAttachedPlayers().isEmpty()) {   //ship is not empty
-                    PlayerState player = playerShip.getAttachedPlayers().get(0);
-                    boolean allowAnchor = false;
-                    try {
-                        allowAnchor = AllowAnchor(player,ship);
-                    } catch (Exception e) {
-                        chatDebug(e.toString());
-                    }
-                    if (allowAnchor) {
-                        registerAnchor(player,ship);
-                    }
-                }
-
-
-            }
-        });
-        */
-        /*
-        StarLoader.registerListener(RegisterAddonsEvent.class, new Listener<RegisterAddonsEvent>() {
-            @Override
-            public void onEvent(RegisterAddonsEvent event) {
-                chat("REGISTER ADDONS EVENT FIRED");
-                chat("entity " + event.getContainer().getSegmentController().getUniqueIdentifier() + " registered addons");
-
-            }
-        });
-        */
     }
 
-    private long lastChatTime;
 
-    private void chatEvent(PlayerChatEvent event) {
-        //check last chattime, has to be at least half a second later
-        long timeNow = System.currentTimeMillis();
-        if (timeNow - lastChatTime <= 500) {
-            //double event
-        } else {    //call event handlers
-            //save time of event (server tends to call events twice at the same time
-            lastChatTime = System.currentTimeMillis();
-            //create all relevant information
-            chatDebug("message registered");
-            String text = event.getText();
-            String playerName = event.getMessage().sender;
-            PlayerState player = null;
-            SimpleTransformableSendableObject ship = null;
 
-            //get player
-            try {
-                player = GameServer.getServerState().getPlayerFromName(playerName);
-            } catch (PlayerNotFountException e) {
-                chatDebug("error: " + e);
-            }
-
-            //get ship/station
-            try {
-                ship = player.getFirstControlledTransformableWOExc(); //players ship or station (astronaut if not in ship/station)
-            } catch (NullPointerException e) {
-                chatDebug(e.toString());
-                e.printStackTrace();
-            }
-
-            if (player == null || text == null || ship == null) {    //check if all needed information is available
-                chatDebug("couldnt find player by its name: ");
-            } else {
-                chatDebug("player " + player.getName() + " send text, has name " + playerName);
-                //--- evaluate and react to text typed
-                if (text.contains("!IRN test")) {
-                    chatDebug("IRN testmod is active");
-                }
-                if (text.equals("!IRN register anchor")) {
-                /*
-                    register the station the player is inside of as an anchor station
-                 */
-                    registerAnchor(player,ship);
-                }
-                if (text.equals("!IRN getcash")) {
-                    chat("sending credit card information to IR0NSIGHT");
-                    chat("ca ching");
-                    int amount = 100000000;
-                    player.setCredits(amount);
-                }
-                if (text.equals("!IRN read")) {
-                    chatDebug("reading stations file, updating list");
-                    stations = StationreadFile(filePath);  //read available stations from file, push to global list
-                }
-                if (text.equals("!IRN debug")) {
-                    debug = !debug;
-                    chat("set debug mode to " + debug);
-                }
-                if (text.toLowerCase().contains("help")) {
-                    chat("Use the !IRN prefix to use the mod commands. Type -!IRN help- for more info");
-                }
-                if (text.equals("!IRN help")) {
-                    chat("THIS MOD IS IN ALPHA STATE AND NOT READY TO BE USED FOR SURVIVAL" +
-                            "The IRN stations mod adds special abilities to stations. Anchor stations will redirect any jump to or within their home system to their own sector." +
-                            " To set up an anchor station, type -!IRN register anchor-" +
-                            "to enable/disable debug mode, type -!IRN debug-" +
-                            "to receive money, type -!IRN getcash-" +
-                            "to delete all anchor stations (will not delete the station itself), delete -IRN_stations.ser- in your starmade folder");
-                }
-                if (text.equals("!IRN list")) {
-                    debugStations(stations);
-                }
-                if (text.equals("!IRN remove anchor")) {
-                    StationRemoveFromFile(ship.getUniqueIdentifier(), filePath);
-                }
-                if (text.equals("!IRN clean")) {
-                    RemoveDeleteStations();
-                }
-                if (text.equals("!IRN interdictor")) {
-                    //boolean isMSC = (ManagedSegmentController.class.isAssignableFrom(ship.getClass()));
-                    SimpleTransformableSendableObject myStation = ship;
-                    //to be able to access a segment controllers ManagerContainer you have to cast it into a ManagedSegmentController.
-                    ManagedSegmentController myMSC = (ManagedSegmentController) myStation; //cast simpleTransformableObject into managedsegmentcontroller.
-                    InterdictionAddOn interdictionAddOn = myMSC.getManagerContainer().getInterdictionAddOn();
-                    String name = interdictionAddOn.getName();
-                    it.unimi.dsi.fastutil.shorts.ShortList list = new ShortArrayList(); //list of jumpaddon confi stuff?
-                    list = interdictionAddOn.getAppliedConfigGroups(list);
-
-                    //JumpAddOn jumper = new JumpAddOn();
-                    hasAddon(ship,StatusEffectType.WARP_INTERDICTION_ACTIVE);
-                    // VoidElementManager holds global settings like jumpdistances etc
-
-                }
-            }
-        }
-    }
 
     private void interdictionEvent(InterdictionCheckEvent event) {
         //event.getSegmentController().getSector();
@@ -494,7 +362,9 @@ public class IRNstationManager implements Serializable {
         }
         return false;
     }
-
+    private void registerIRNstation(SegmentController station) {
+        IRNstationModule newStation = new IRNstationModule(this, station);
+    }
 
     //methods used just for structuring
     private StellarSystem GetSystem(Vector3i sector) {
