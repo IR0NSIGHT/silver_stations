@@ -35,7 +35,7 @@ public class EntityLoadEventLoop{
                     ArrayList<StarEntity> newEnts = new ArrayList<>();
                     ArrayList<StarEntity> unloadedEnts = new ArrayList<>();
                     if (oldLoadedEnts == null || oldLoadedEnts.size() == 0) { //first time init, all entites are new.
-                        oldLoadedEnts = getoldLoadedEnts();
+                        oldLoadedEnts = new ArrayList<>();
 
                     }
 
@@ -77,7 +77,7 @@ public class EntityLoadEventLoop{
 
             }
             private boolean IsInList(ArrayList<StarEntity> newLoadedEnts, String UID) {
-            for (int j = 0; j < newLoadedEnts.size(); j++) {
+                for (int j = 0; j < newLoadedEnts.size(); j++) {
                     //compare UIDs
                     //break out at first matching instance
                     if (newLoadedEnts.get(j).getUID().equals(UID)) {

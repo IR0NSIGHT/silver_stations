@@ -32,12 +32,10 @@ public class IRNstationManager implements Serializable {
 
     public IRNstationManager() {
         anchorManager = new AnchorManager(this);
-        //chatDebug("station manager is running");
-        stations = new ArrayList<IRNstationModule>();
-        filePath = "IRN_stations.ser";
-        // createFile(stations);   //create savefile
+        stationFileHandler fileHandler = new stationFileHandler(this);
+        filePath = fileHandler.filePath;;
+        stations = new ArrayList<>();
         createListeners(); //adds event listeners
-
     }
 
     private boolean debug = false;
@@ -112,105 +110,25 @@ public class IRNstationManager implements Serializable {
     }
 
     //Debug file handlers storing station and not list
-    public boolean StationcreateFile(List<IRNstationModule> stationsL) {  //create a savefile for the stations if it doesnt exist yet.
-        chatDebug("file creator was called");
-        FileOutputStream fos = null;
-        ObjectOutputStream oos = null;
-        //List<IRNstationModule> stationsL = new ArrayList<IRNstationModule>();
-        //stationsL.add(station);
-        chatDebug("creating file");
-        if (stationsL == null) {
-            chatDebug("station list is null");
-            return false;
-        }
-        //chatDebug("creating fos");
-        //create file output stream
-        try {
-            fos = new FileOutputStream(filePath);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            chatDebug(e.toString());
-            return false;
-        }
-        //chatDebug("creating oos");
-        //create Object output system
-        try {
-            oos = new ObjectOutputStream(fos);
-        } catch (IOException e) {
-            e.printStackTrace();
-            chatDebug(e.toString());
-            return false;
-        }
-        //write file
-        if (fos != null && oos != null) {
-            try {
-                for (int i = 0; i < stationsL.size(); i++) {    //write each sation object by itself
-                    oos.writeObject(stationsL.get(i));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                chatDebug(e.toString());
-                return false;
-            }
-        }
-        //chatDebug("closing");
-        try {
-            oos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            chatDebug(e.toString());
-            return false;
-        }
-        stations = stationsL;   //update global list to newest file.
-        debugStations(stations);
-        chatDebug("file created");
-        return true;
-    }
 
-    public boolean StationaddStationToFile(IRNstationModule station) {    //read file and write the added station to it
 
-        chatDebug("station add to file was called");
-        //read the file
 
-        List<IRNstationModule> stationsL = StationreadFile(filePath);
-        if (stationsL != null) {
-            chatDebug("file successfully read");
-        } else {
-            chatDebug("error: station list read from file is null");
-        }
-        ;
-        //chatDebug("adding station to local list");
-        debugStations(stationsL);
-        //check if station is in list
-        if (FindStationInList(stationsL, station) != -1) {
-            chatDebug("station is already registered in file!");
-            return true;
-        } else {
-            //add station to list
-            stationsL.add(station);
-        }
-        ;
 
-        chatDebug("rewriting file");
-        //rewrite file
-        if (StationcreateFile(stationsL)) {
-            chatDebug("file successfully written");
-            return true;
-        }
-        chatDebug("station not successfully added to file");
-        return false;
-    }
-
-    public List<IRNstationModule> StationreadFile(String filePath) {
+    public List<IRNstationModule> ReadListFromFile(String filePath) {
+        /**
+         * attempt to read the savefile containing the station modules.
+         * if sth goes wrong, return the empty stationsL1 list.
+         */
         List<IRNstationModule> stationsL1 = new ArrayList<IRNstationModule>();
         //check if file exists, else create it
         chat("trying to read station file");
         File f = new File(filePath);
         if (f.exists()) {
             chatDebug("file exists");
+
         } else {
             chatDebug("file does not exist, creating file");
-            StationcreateFile(stationsL1);   //create savefile
+             return stationsL1;
         }
 
         chatDebug("accessing data");
@@ -226,7 +144,7 @@ public class IRNstationManager implements Serializable {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             chatDebug(e.toString());
-            return null;
+             return stationsL1;
         }
         //chatDebug("ois");
         //create object input stream
@@ -235,7 +153,7 @@ public class IRNstationManager implements Serializable {
         } catch (IOException e) {
             e.printStackTrace();
             chatDebug(e.toString());
-            return null;
+             return stationsL1;
         }
         //loop over input stream reading one station module at a time and add it to list, until eof Exc. is caught -> stream empty
         for (int i = 0; i < 10; i++) {
@@ -248,19 +166,19 @@ public class IRNstationManager implements Serializable {
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
                 chatDebug(e.toString());
-                return null;
+                return stationsL1;
             } catch (InvalidClassException e) {
                 e.printStackTrace();
                 chatDebug(e.toString());
-                return null;
+                 return stationsL1;
             } catch (StreamCorruptedException e) {
                 e.printStackTrace();
                 chatDebug(e.toString());
-                return null;
+                 return stationsL1;
             } catch (OptionalDataException e) {
                 e.printStackTrace();
                 chatDebug(e.toString());
-                return null;
+                 return stationsL1;
             } catch (EOFException e) {
                 e.printStackTrace();
                 chatDebug(e.toString());
@@ -269,7 +187,7 @@ public class IRNstationManager implements Serializable {
             } catch (IOException e) {
                 e.printStackTrace();
                 chatDebug(e.toString());
-                return null;
+                 return stationsL1;
             }
         }
         debugStations(stationsL1);
@@ -282,39 +200,9 @@ public class IRNstationManager implements Serializable {
         } catch (IOException e) {
             e.printStackTrace();
             chatDebug(e.toString());
-            return null;
+             return stationsL1;
         }
 
-    }
-
-    public boolean StationRemoveFromFile(String stationUID, String filePath) {
-        List<IRNstationModule> list = StationreadFile(filePath);
-        if (list == null || list.size() == 0) {
-            chatDebug("list read from file is null or size zero");
-            return false;
-        } else {
-            chatDebug("got station list from file");
-            int idx = FindStationInList(list, stationUID);
-            if (idx == -1) {
-                chatDebug("station is not in list");
-                return false;
-            } else {
-                chatDebug("station is at ind " + idx + " of stations list");
-                IRNstationModule removed = list.remove(idx);
-                chatDebug("removed station " + removed.stationName + " (ID " + removed.stationUID + ") sector " + removed.getStationSector() + " from list.");
-
-                boolean wroteFile = StationcreateFile(list);
-                if (wroteFile) {
-                    chatDebug("rewrote file with new list");
-                    StationreadFile(filePath);  //re read to update global list
-                    debugStations(list);
-                    return true;
-                } else {
-                    chatDebug("fatal error trying to write file with new list");
-                    return false;
-                }
-            }
-        }
     }
 
     private void registerIRNstation(SegmentController station) {
@@ -335,25 +223,6 @@ public class IRNstationManager implements Serializable {
         }
 
         return system;
-    }
-
-    private List<IRNstationModule> RemoveDeleteStations() {
-        List<IRNstationModule> deadStations = new ArrayList<>();
-        List<IRNstationModule> list = StationreadFile(filePath);
-        for (int i = 0; i < list.size(); i++) {
-            IRNstationModule station = list.get(i);
-            //
-            boolean isExist = GameServer.getServerState().existsEntity(SimpleTransformableSendableObject.EntityType.SPACE_STATION, station.stationUID);
-            if (!isExist) {
-                chatDebug(" found " + station.stationUID + " to be not existant on gameserver. marking for delete from savefile");
-                deadStations.add(station);  //mark for delete
-                list.remove(i);
-            }
-        }
-        chatDebug("found " + deadStations.size() + " dead stations in list");
-        chatDebug("rewriting cleaned list to file");
-        StationcreateFile(list);
-        return deadStations;
     }
 
     public int FindStationInList(List<IRNstationModule> list, IRNstationModule element) {

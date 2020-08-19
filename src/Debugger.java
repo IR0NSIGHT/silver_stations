@@ -115,7 +115,15 @@ public class Debugger {
             ChatDebug("station UID: --------" + station.stationUID);
             ChatDebug("station sector: -----" + station.getStationSector());
             ChatDebug("station type:--------" + station.type);
-            ChatDebug("station faction:-----" + GameServer.getServerState().getFactionManager().getFaction(station.factionID).getName());
+            String factionName = Integer.toString(station.factionID);
+            try {
+                factionName = GameServer.getServerState().getFactionManager().getFaction(station.factionID).getName();
+            } catch (Exception e) {
+                ChatDebug("faction name error");
+                ChatDebug(e.toString());
+            }
+            ChatDebug("faction name:--------" + factionName);
+
         }
     };
 }

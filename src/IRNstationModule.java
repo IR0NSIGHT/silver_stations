@@ -43,6 +43,7 @@ public class IRNstationModule implements Serializable {
     public IRNstationModule(IRNstationManager stationManagerManagerI, SimpleTransformableSendableObject stationI) { //constructor
         stationManager = stationManagerManagerI;
         stationSegmentController = (SegmentController) stationI;
+        type = StationTypes.DEFAULT;
         UpdateStats();
 
         stationSectorArr = V3itoArr(stationSector);
@@ -55,6 +56,7 @@ public class IRNstationModule implements Serializable {
         ModPlayground.broadcastMessage("new station module created");
         stationManager = stationManagerManagerI;
         stationSegmentController = stationI;
+        type = StationTypes.DEFAULT;
         UpdateStats();
         stationSectorArr = V3itoArr(stationSector);
         stationSystemArr = V3itoArr(stationSystem);
@@ -96,7 +98,12 @@ public class IRNstationModule implements Serializable {
         try {
             if (stationSegmentController != null) {
                 stationID = stationSegmentController.getId(); //TODO why do i have that field?
-                factionID = stationSegmentController.getFactionId();
+                try {
+                    factionID = stationSegmentController.getFactionId();
+                } catch (Exception e) {
+                    ModPlayground.broadcastMessage("failed to get faction ID");
+                    ModPlayground.broadcastMessage(e.toString());
+                }
                 stationName = stationSegmentController.getRealName();
                 stationUIDfull = stationSegmentController.getUniqueIdentifierFull();
                 stationUID = stationSegmentController.getUniqueIdentifier();

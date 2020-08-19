@@ -1,4 +1,5 @@
 import api.ModPlayground;
+import api.common.GameServer;
 import api.entity.StarEntity;
 import api.listener.Listener;
 import api.listener.events.ShipJumpEngageEvent;
@@ -44,10 +45,31 @@ public class AnchorManager {
             @Override
             public void run() {
                 try {
-                    //ModPlayground.broadcastMessage("anchor loop at --------" + System.currentTimeMillis()/1000 + "-------------------");
+                    ModPlayground.broadcastMessage("anchor loop at --------" + System.currentTimeMillis()/1000 + "-------------------");
                     for (int i = 0; i < stationManager.stations.size(); i++) {
                         //check if has segment controller
                         IRNstationModule station = stationManager.stations.get(i);
+                        //check is station is still existing on server
+
+                        boolean isExist = GameServer.getServerState().existsEntity(SimpleTransformableSendableObject.EntityType.SPACE_STATION,station.stationName);
+                        if (!isExist) {
+                            //TODO isExists gives false negatives.
+                            ModPlayground.broadcastMessage("station " + station.stationName + "does not exist on server. purge from lists.");
+                            //ModPlayground.broadcastMessage("station is entity type " + station.getstationSegmentController().getType());
+                            //remove dead stations from anchors and stations list. -> garbage collector will kill instances
+                           int idx = manager.FindStationInList(anchors,station.stationUID);
+                           if (idx != -1) {
+                               //remove dead station from list
+                               anchors.remove(idx);
+                           }
+                            idx = manager.FindStationInList(manager.stations,station.stationUID);
+                            if (idx != -1) {
+                                //remove dead station from list
+                                manager.stations.remove(idx);
+                            }
+                            continue;
+                        }
+
                         //ModPlayground.broadcastMessage("station is: " + station.stationName);
                         if (station.getstationSegmentController() != null) {
                             //ModPlayground.broadcastMessage("anchor manager checking conditions");
@@ -83,6 +105,24 @@ public class AnchorManager {
                                 anchors.remove(idx);
 
                             }
+                        } else {
+                            //no segment controller -> not loaded
+                            int idx = manager.FindStationInList(anchors, station.stationUID);
+                            if (station.type == IRNstationModule.StationTypes.ANCHOR) {
+                                //ModPlayground.broadcastMessage("station at idx in anchors: " + idx);
+                                if (idx == -1) {
+                                    /** station has anchor capability and is not in anchors list
+                                     *
+                                     */
+                                    ModPlayground.broadcastMessage("adding unloaded station to anchors: " + station.stationName);
+                                    anchors.add(station);
+                                }
+                            } else {
+                                if (idx != -1) {
+                                    ModPlayground.broadcastMessage("removing unloaded station from anchors");
+                                    anchors.remove(idx);
+                                }
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -115,9 +155,10 @@ public class AnchorManager {
                 //ModPlayground.broadcastMessage("AA: checking for ownership of system");
                 try {
                     Vector3i sector = stationModule.getStationSector();
-                    if (manager.GetSystem(sector).getOwnerFaction() != station.getFactionId()) {
+                    if (manager.GetSystem(sector).getOwnerFaction() != station.getFactionId() || station.getFactionId() == 0 || manager.GetSystem(sector).getOwnerFaction() == 0) {
                         /**
                          *  compares system ownership to stations faction
+                         *  factioID = 0 checks for unclaimed stuff -> otherwise if you shoot out a stations module in an unclaimed system, it gets anchored.
                          */
                         ownsSystem = false;
                         failMessage += "your faction does not own this system. ";
@@ -185,7 +226,8 @@ public class AnchorManager {
                                 return i;    //break from method
                             }
                         } catch (Exception e) {
-                            ModPlayground.broadcastMessage("station has system field = null" + e.toString());
+                            ModPlayground.broadcastMessage("station has system field = null");
+                            ModPlayground.broadcastMessage(e.toString());
                         }
 
 
