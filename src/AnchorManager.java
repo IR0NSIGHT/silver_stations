@@ -26,7 +26,7 @@ public class AnchorManager {
 
     public AnchorManager(IRNstationManager manager) {
         this.manager = manager;
-        //createJumpListener();
+        createJumpListener();
         UpdateLoop();
     }
 
@@ -264,19 +264,18 @@ public class AnchorManager {
         IRNstationModule anchor;
         int oldSystemAnchored = manager.StationInSystem(anchors, oldSystem);
         int newSystemAnchored = manager.StationInSystem(anchors, newSystem);
-        /**
-         * check origin system first for anchor -> if origin and target systems are anchored, origin will win.
-         */
-        if (oldSystemAnchored != -1) {
-            anchor = anchors.get(oldSystemAnchored);
-        } else {
-            anchor = anchors.get(newSystemAnchored);
-        }
 
         if (oldSystemAnchored != -1 || newSystemAnchored != -1) {
             /**stop original jump
              * add jump to anchor stations homesector
+             * check origin system first for anchor -> if origin and target systems are anchored, origin will win.
              */
+            if (oldSystemAnchored != -1) {
+                anchor = anchors.get(oldSystemAnchored);
+            } else {
+                anchor = anchors.get(newSystemAnchored);
+            }
+
             event.setCanceled(true);
             //queue new jump to anchor station
 

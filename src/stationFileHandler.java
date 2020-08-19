@@ -101,7 +101,7 @@ public class stationFileHandler {
                 return true;
             }
             private void chatDebug(String s) {
-                if (true) {
+                if (false) {
                     ModPlayground.broadcastMessage(s);
                 }
             }
