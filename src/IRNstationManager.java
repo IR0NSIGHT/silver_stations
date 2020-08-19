@@ -27,14 +27,17 @@ public class IRNstationManager implements Serializable {
         central manager that creates, stores and handles all station modules
      */
     public transient List<IRNstationModule> stations = null; //holds all station instances
+    public transient AnchorManager anchorManager;
     public String filePath;
 
     public IRNstationManager() {
+        anchorManager = new AnchorManager(this);
         //chatDebug("station manager is running");
         stations = new ArrayList<IRNstationModule>();
         filePath = "IRN_stations.ser";
         // createFile(stations);   //create savefile
         createListeners(); //adds event listeners
+
     }
 
     private boolean debug = false;
@@ -48,93 +51,54 @@ public class IRNstationManager implements Serializable {
             @Override
             public void onEvent(EntityLoadedEvent event) {
                 if (event.getSegmentController().getType() == SimpleTransformableSendableObject.EntityType.SPACE_STATION) {
+                    ModPlayground.broadcastMessage("station was loaded");
                     //check for existing stationfile
-                    String stationUID = event.getSegmentController().getUniqueIdentifier();
-                    int idx = FindStationInList(stations ,stationUID);
-                    if (idx != -1) { //not yet registered
-                        //create station object
-                        registerIRNstation(event.getSegmentController());
-                    } else { //is registered
-                        //add segment controller to station object
-                        stations.get(idx).setStationSegmentController(event.getSegmentController());
+                    try {
+                        String stationUID = event.getSegmentController().getUniqueIdentifier();
+                        int idx = FindStationInList(stations, stationUID);
+                        //ModPlayground.broadcastMessage("idx of station is " + idx);
+                        if (idx != -1) { //already registered
+                            //add segment controller to station object
+                            stations.get(idx).setStationSegmentController(event.getSegmentController());
+                        } else { //not yet registered
+                            //create station object
+                            //ModPlayground.broadcastMessage("segmentcontroller is " + event.getSegmentController());
+
+                            registerIRNstation(event.getSegmentController());
+                        }
+                    } catch (Exception e) {
+                        ModPlayground.broadcastMessage("entity loaded event listener failed");
+                        ModPlayground.broadcastMessage(e.toString());
                     }
+
                 }
             }
         });
         StarLoader.registerListener(InterdictionCheckEvent.class, new Listener<InterdictionCheckEvent>() {
             @Override
             public void onEvent(InterdictionCheckEvent event) { //detect jumps
-                interdictionEvent(event);
+                //interdictionEvent(event);
             }
         });
         StarLoader.registerListener(SegmentControllerOverheatEvent.class, new Listener<SegmentControllerOverheatEvent>() {
             @Override
             public void onEvent(SegmentControllerOverheatEvent segmentControllerOverheatEvent) {    //delete destroyed stations from list
-                overheatEvent(segmentControllerOverheatEvent);
+                //overheatEvent(segmentControllerOverheatEvent);
             }
         });
         StarLoader.registerListener(ShipJumpEngageEvent.class, new Listener<ShipJumpEngageEvent>() {
             @Override
             public void onEvent(ShipJumpEngageEvent event) {    //delete destroyed stations from list
-                jumpEvent(event);
+              //  jumpEvent(event);
             }
         });
     }
-
-
 
 
     private void interdictionEvent(InterdictionCheckEvent event) {
         //event.getSegmentController().getSector();
     }
 
-    private void jumpEvent(ShipJumpEngageEvent event) {
-        /*
-            check old and new system if they have registered anchors
-            if true, abort jump.
-         */
-        SegmentController ship = event.getController();
-        Vector3i newSector = event.getNewSector();
-        Vector3i oldSector = event.getOriginalSectorPos();
-        Vector3i newSystem = GetSystem(newSector).getPos();
-        Vector3i oldSystem = GetSystem(oldSector).getPos();
-        chatDebug("jump detected. origin system: " + oldSystem + " to system " + newSystem);
-        //check if stations list is existant, if not read from file
-        if (stations == null || stations.size() == 0) {
-            chatDebug("station list is empty/null, reading from file");
-            stations = StationreadFile(filePath);
-        }
-        ;
-        IRNstationModule anchor;
-        int oldSystemAnchored = systemAlreadyTaken(stations, oldSystem);
-        int newSystemAnchored = systemAlreadyTaken(stations, newSystem);
-        if (oldSystemAnchored != -1) {
-            anchor = stations.get(oldSystemAnchored);
-            chat("origin system is anchored: " + oldSystem);
-        } else {
-            if (newSystemAnchored != -1) {
-
-                chat("new system is anchored: " + newSystem);
-            }
-            anchor = stations.get(newSystemAnchored);
-            if (anchor == null) {
-                chatDebug("anchor is null");
-            }
-        }
-
-        if (oldSystemAnchored != -1 || newSystemAnchored != -1) {
-            chatDebug("Anchor detected, redirecting jump");
-            event.setCanceled(true);
-            chatDebug("redirecting jump to anchor");
-            //queue new jump to anchor station
-
-            Vector3i jumpTo = anchor.getStationSector(); //target sector (no distance limit set)
-            SegmentController sc = ship;  //ships segment controller, using one from an interdiction check to redirect ships
-            sc.getNetworkObject().graphicsEffectModifier.add((byte) 1); //dont know what that does.
-            SectorSwitch sectorSwitch = ((GameServerState) sc.getState()).getController().queueSectorSwitch(sc, jumpTo, 1, false, true, true);
-
-        }
-    }
 
     private void overheatEvent(SegmentControllerOverheatEvent event) {
         chat("overheat detected");
@@ -142,7 +106,7 @@ public class IRNstationManager implements Serializable {
         int idx = FindStationInList(stations, entityUID); //retrieve list entry
         if (idx != -1) {
             chat("anchor station " + event.getEntity().getName() + " was destroyed by " + event.getLastDamager());
-            StationRemoveFromFile(entityUID, filePath); //pass entitys uid for removal
+          //  StationRemoveFromFile(entityUID, filePath); //pass entitys uid for removal
         }
 
     }
@@ -353,21 +317,12 @@ public class IRNstationManager implements Serializable {
         }
     }
 
-    //station types
-    private boolean registerAnchor(PlayerState player, SimpleTransformableSendableObject station) {
-        boolean allowAnchor = AllowAnchor(player, station);
-        if (allowAnchor) { //all conditions are met, register new anchor
-            IRNstationModule newStation = new IRNstationModule(this, station); //create a new station module to hold vital info
-            return true;
-        }
-        return false;
-    }
     private void registerIRNstation(SegmentController station) {
         IRNstationModule newStation = new IRNstationModule(this, station);
     }
 
     //methods used just for structuring
-    private StellarSystem GetSystem(Vector3i sector) {
+    public StellarSystem GetSystem(Vector3i sector) {
         //get universe
         Universe universe = GameServer.getUniverse();
         //get system from sector pos
@@ -401,10 +356,11 @@ public class IRNstationManager implements Serializable {
         return deadStations;
     }
 
-    private int FindStationInList(List<IRNstationModule> list, IRNstationModule element) {
+    public int FindStationInList(List<IRNstationModule> list, IRNstationModule element) {
         /*
             compare stations ID to all station IDs in list, return index of first found element, else return -1 if not found
          */
+
         for (int i = 0; i < list.size(); i++) {
             IRNstationModule x = list.get(i);
             if (x.stationUID == element.stationUID) {
@@ -418,26 +374,26 @@ public class IRNstationManager implements Serializable {
         return -1;
     }
 
-    private int FindStationInList(List<IRNstationModule> list, String stationUID) {
+    public int FindStationInList(List<IRNstationModule> list, String stationUID) {
         /*
             compare stations ID to all station IDs in list, return index of first found element, else return -1 if not found
          */
-        chatDebug("try to find stationUID " + stationUID + " in list");
+        //chatDebug("try to find stationUID " + stationUID + " in list");
         for (int i = 0; i < list.size(); i++) {
             IRNstationModule x = list.get(i);
-            chatDebug("x.UID " + x.stationUID + " vs UID" + stationUID);
+            //chatDebug("x.UID " + x.stationUID + " vs UID" + stationUID);
             if (x.stationUID.equals(stationUID)) {
-                chatDebug("station already present by UID in list");
-                chatDebug(x.stationUID + " in sector " + x.getStationSector() + " system" + x.getStationSystem());
+               // chatDebug("station already present by UID in list");
+                chatDebug("ID found in list");
+                //chatDebug(x.stationUID + " in sector " + x.getStationSector() + " system" + x.getStationSystem());
                 return i;
             }
         }
-        ;
         chatDebug("ID not found in list");
         return -1;
     }
 
-    private List<IRNstationModule> GetFactionsStations (int factionID, List<IRNstationModule> allList) {
+    private List<IRNstationModule> GetFactionsStations(int factionID, List<IRNstationModule> allList) {
         List<IRNstationModule> list = new ArrayList<>();
         for (int i = 0; i < allList.size(); i++) {
             if (allList.get(i).factionID == factionID) {
@@ -447,11 +403,11 @@ public class IRNstationManager implements Serializable {
         return list;
     }
 
-    private int systemAlreadyTaken(List<IRNstationModule> list, Vector3i system) {
+    public int StationInSystem(List<IRNstationModule> list, Vector3i system) {
         /*
             will search list for system, will return index of first match, returns -1 if nothing found
          */
-        debugStations(list);
+       // debugStations(list);
         //cycle through list and compare each registered anchor stations system to input system
         for (int i = 0; i < list.size(); i++) {
             Vector3i xSys = list.get(i).getStationSystem();
@@ -466,71 +422,13 @@ public class IRNstationManager implements Serializable {
         return -1;
     }
 
-    private boolean AllowAnchor(PlayerState player, SimpleTransformableSendableObject station) {
-        String stationUID = station.getUniqueIdentifier();
-        Vector3i stationSector = station.getSector(new Vector3i());
-        Vector3i stationSystem = station.getSystem(new Vector3i());
-        boolean isStation = true;
-        boolean systemIsFree = true;
-        boolean stationNotRegistered = true;
-        boolean ownsStation = true;
-        boolean ownsSystem = true;
-        boolean stationHasInhibitor = true; //TODO check if station has inhibitor chambers
-        boolean isNotHomebase = true; //TODO add check for homebase
-        String failMessage = "";
-        //TODO boolean for debug messages
-        //TODO feedback messages directly to player, not on serverchat.
-        if (station.getType() != SimpleTransformableSendableObject.EntityType.SPACE_STATION) {
-            isStation = false;
-           failMessage += ("only stations can be registered. "); //TODO add into central feedback system instead of breaking out here.
-
-        }
-        if (isStation) {
-            if (systemAlreadyTaken(stations, stationSystem) != -1) {
-                failMessage += ("system already has an anchor station. ");
-                systemIsFree = true;
-            }
-            if (FindStationInList(stations, stationUID) != -1) {
-                failMessage += ("station is already registered. ");
-                stationNotRegistered = true;
-            }
-            if (GetSystem(station.getSector(new Vector3i())).getOwnerFaction() != station.getFactionId()) {
-            /*
-                compares system ownership to ships faction
-             */
-                ownsSystem = false;
-                failMessage += "your faction does not own this system. ";
-            }
-            if (player.getFactionId() != station.getFactionId()) {
-            /*
-                checks for player faction and station faction
-             */
-                ownsStation = false;
-                failMessage += "your faction does not own this station.";
-            }
-            if (!hasAddon(station,StatusEffectType.WARP_INTERDICTION_ACTIVE)) {
-                /*
-                    checks if entity has a inhibitor chamber selected. (does not need to be running)
-                 */
-                stationHasInhibitor = false;
-                failMessage += "station does not have a inhibitor installed. ";
-            }
-
-        }
-        if (isStation && systemIsFree && stationNotRegistered && ownsStation && ownsSystem && stationHasInhibitor && isNotHomebase) {
-            return true;
-        }
-        chat(failMessage);
-        return false;
-    }
-
     private void chat(String s) {
         ModPlayground.broadcastMessage(s);
     }
 
     private void chatDebug(String s) {
-        if (debug) {
-            ModPlayground.broadcastMessage(s);
+        if (false) {
+            ModPlayground.broadcastMessage("SM" + s);
         }
     }
 
@@ -543,34 +441,5 @@ public class IRNstationManager implements Serializable {
         }
         ;
     }
-    private boolean hasAddon (SimpleTransformableSendableObject ship, StatusEffectType addon) {
-        chatDebug("listing all modules of interdiction addon for entity " + ship.getUniqueIdentifier());
-        chatDebug("searching for " + addon);
-        ManagedSegmentController myMSC = (ManagedSegmentController) ship;
-        chatDebug("MSC is " + myMSC.toString());
-        //GameServer.getServerState().
-        InterdictionAddOn interdictionAddOn = myMSC.getManagerContainer().getInterdictionAddOn();
-        chatDebug("interdiction addon is " + interdictionAddOn.getName());
-        List<EffectModule> moduleList = interdictionAddOn.getConfigManager().getModulesList();
-        chatDebug("modules list has size: " + moduleList.size());
-        String val = "";
-        for (int i = 0; i < moduleList.size(); i++) {
-            EffectModule module = moduleList.get(i);
 
-            try {
-                val = module.getValueString();
-
-            } catch (Exception e) {
-                val = "unreadable";
-                chatDebug(e.toString());
-            }
-            chatDebug("" + module.getType() + ": " + val);
-            if (module.getType() == addon) {
-
-                return  true;
-            }
-        }
-        chatDebug("done with list. no inhibitor found.");
-        return false;
-    }
 }

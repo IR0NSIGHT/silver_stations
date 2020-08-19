@@ -3,7 +3,7 @@ import api.mod.StarMod;
 
 //Mods must extend StarMod
 public class IRNCore extends StarMod {
-    public static IRNstationManager stations = null;
+    public static IRNstationManager stationManager;
     //This blank main method is needed, it allows you to select this as your main class.
     public static void main(String[] args) {
     }
@@ -20,5 +20,7 @@ public class IRNCore extends StarMod {
     @Override
     public void onEnable() {
         EntityLoadEventLoop loop = new EntityLoadEventLoop();
+        stationManager = new IRNstationManager();
+        Debugger debugger = new Debugger(stationManager,stationManager.anchorManager);
     }
 }
