@@ -1,6 +1,4 @@
-import api.ModPlayground;
 import api.common.GameServer;
-import api.entity.StarEntity;
 import api.listener.Listener;
 import api.listener.events.ShipJumpEngageEvent;
 import api.mod.StarLoader;
@@ -11,9 +9,7 @@ import org.schema.game.common.controller.elements.jumpprohibiter.InterdictionAdd
 import org.schema.game.common.data.ManagedSegmentController;
 import org.schema.game.common.data.blockeffects.config.EffectModule;
 import org.schema.game.common.data.blockeffects.config.StatusEffectType;
-import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
-import org.schema.game.mod.Mod;
 import org.schema.game.server.controller.SectorSwitch;
 import org.schema.game.server.data.GameServerState;
 
@@ -21,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AnchorManager {
-    private IRNstationManager manager;
+    private final IRNstationManager manager;
     private List<IRNstationModule> anchors;
 
     public AnchorManager(IRNstationManager manager) {
@@ -45,7 +41,7 @@ public class AnchorManager {
             @Override
             public void run() {
                 try {
-                    ModPlayground.broadcastMessage("anchor loop at --------" + System.currentTimeMillis()/1000 + "-------------------");
+                    manager.chatDebug ("anchor loop at --------" + System.currentTimeMillis()/1000 + "-------------------");
                     for (int i = 0; i < stationManager.stations.size(); i++) {
                         //check if has segment controller
                         IRNstationModule station = stationManager.stations.get(i);
@@ -54,8 +50,8 @@ public class AnchorManager {
                         boolean isExist = GameServer.getServerState().existsEntity(SimpleTransformableSendableObject.EntityType.SPACE_STATION,station.stationName);
                         if (!isExist) {
                             //TODO isExists gives false negatives.
-                            ModPlayground.broadcastMessage("station " + station.stationName + "does not exist on server. purge from lists.");
-                            //ModPlayground.broadcastMessage("station is entity type " + station.getstationSegmentController().getType());
+                            manager.chatDebug("station " + station.stationName + "does not exist on server. purge from lists.");
+                            //manager.chatDebug("station is entity type " + station.getstationSegmentController().getType());
                             //remove dead stations from anchors and stations list. -> garbage collector will kill instances
                            int idx = manager.FindStationInList(anchors,station.stationUID);
                            if (idx != -1) {
@@ -70,10 +66,10 @@ public class AnchorManager {
                             continue;
                         }
 
-                        //ModPlayground.broadcastMessage("station is: " + station.stationName);
+                        //manager.chatDebug("station is: " + station.stationName);
                         if (station.getstationSegmentController() != null) {
-                            //ModPlayground.broadcastMessage("anchor manager checking conditions");
-                            //ModPlayground.broadcastMessage("station has segment controller");
+                            //manager.chatDebug("anchor manager checking conditions");
+                            //manager.chatDebug("station has segment controller");
                             station.UpdateStats();
                             //check for anchor properties
                             boolean allowAnchor = AllowAnchor(station);
@@ -84,16 +80,16 @@ public class AnchorManager {
                                     station.setType(IRNstationModule.StationTypes.DEFAULT);
                                 }
                             }
-                            //ModPlayground.broadcastMessage("station allowed anchor: " + allowAnchor);
-                            //ModPlayground.broadcastMessage("checking anchors list for station");
+                            //manager.chatDebug("station allowed anchor: " + allowAnchor);
+                            //manager.chatDebug("checking anchors list for station");
                             //check if in anchors
                             int idx = manager.FindStationInList(anchors, station.stationUID);
-                            //ModPlayground.broadcastMessage("station at idx in anchors: " + idx);
+                            //manager.chatDebug("station at idx in anchors: " + idx);
                             if (allowAnchor && idx == -1) {
                                 /** station has anchor capability and is not in anchors list
                                  *
                                  */
-                                ModPlayground.broadcastMessage("adding station to anchors: " + station.stationName);
+                                manager.chatDebug("adding station to anchors: " + station.stationName);
                                 anchors.add(station);
 
                             }
@@ -101,7 +97,7 @@ public class AnchorManager {
                                 /**
                                  * station is in list but has NO anchor capability
                                  */
-                                ModPlayground.broadcastMessage("removing station from anchors: " + station.stationName);
+                                manager.chatDebug("removing station from anchors: " + station.stationName);
                                 anchors.remove(idx);
 
                             }
@@ -109,25 +105,25 @@ public class AnchorManager {
                             //no segment controller -> not loaded
                             int idx = manager.FindStationInList(anchors, station.stationUID);
                             if (station.type == IRNstationModule.StationTypes.ANCHOR) {
-                                //ModPlayground.broadcastMessage("station at idx in anchors: " + idx);
+                                //manager.chatDebug("station at idx in anchors: " + idx);
                                 if (idx == -1) {
                                     /** station has anchor capability and is not in anchors list
                                      *
                                      */
-                                    ModPlayground.broadcastMessage("adding unloaded station to anchors: " + station.stationName);
+                                    manager.chatDebug("adding unloaded station to anchors: " + station.stationName);
                                     anchors.add(station);
                                 }
                             } else {
                                 if (idx != -1) {
-                                    ModPlayground.broadcastMessage("removing unloaded station from anchors");
+                                    manager.chatDebug("removing unloaded station from anchors");
                                     anchors.remove(idx);
                                 }
                             }
                         }
                     }
                 } catch (Exception e) {
-                    ModPlayground.broadcastMessage("anchor manager update loop failed");
-                    ModPlayground.broadcastMessage(e.toString());
+                    manager.chatDebug("anchor manager update loop failed");
+                    manager.chatDebug(e.toString());
                 }
 
                 //get all stations with a segment controller
@@ -137,7 +133,7 @@ public class AnchorManager {
 
             private boolean AllowAnchor (IRNstationModule stationModule){
                 SegmentController station = stationModule.getstationSegmentController();
-                //ModPlayground.broadcastMessage("AllowAnchor running");
+                //manager.chatDebug("AllowAnchor running");
                 String stationUID = station.getUniqueIdentifier();
                 Vector3i stationSystem = station.getSystem(new Vector3i());
                 boolean systemIsFree = true;
@@ -146,13 +142,13 @@ public class AnchorManager {
                 boolean isNotHomebase = true; //TODO add check for homebase
                 String failMessage = "";
                 //TODO feedback messages directly to player, not on serverchat.
-                //ModPlayground.broadcastMessage("AA: checking for other anchors in system");
+                //manager.chatDebug("AA: checking for other anchors in system");
                 if (StationInSystem(anchors, stationSystem, stationUID) != -1) {
                     //TODO causes loop to fail, run without timer
                     failMessage += ("system already has an anchor station. ");
                     systemIsFree = false;
                 }
-                //ModPlayground.broadcastMessage("AA: checking for ownership of system");
+                //manager.chatDebug("AA: checking for ownership of system");
                 try {
                     Vector3i sector = stationModule.getStationSector();
                     if (manager.GetSystem(sector).getOwnerFaction() != station.getFactionId() || station.getFactionId() == 0 || manager.GetSystem(sector).getOwnerFaction() == 0) {
@@ -164,11 +160,11 @@ public class AnchorManager {
                         failMessage += "your faction does not own this system. ";
                     }
                 } catch (Exception e) {
-                    ModPlayground.broadcastMessage("failed to check system ownership");
-                    ModPlayground.broadcastMessage(e.toString());
+                    manager.chatDebug("failed to check system ownership");
+                    manager.chatDebug(e.toString());
                 }
 
-                //ModPlayground.broadcastMessage("AA: checking for installed interdictor");
+                //manager.chatDebug("AA: checking for installed interdictor");
                 if (!hasAddon(station, StatusEffectType.WARP_INTERDICTION_ACTIVE)) {
 
                     //checks if entity has a inhibitor chamber selected.(does not need to be running)
@@ -180,7 +176,7 @@ public class AnchorManager {
                 if (systemIsFree && ownsSystem && stationHasInhibitor && isNotHomebase) {
                     return true;
                 }
-                //ModPlayground.broadcastMessage(failMessage);
+                //manager.chatDebug(failMessage);
                 return false;
             }
             private boolean hasAddon (SegmentController station, StatusEffectType addon){
@@ -205,7 +201,7 @@ public class AnchorManager {
                 /**
                  will search list for system, will return index of first match, returns -1 if nothing found
                  */
-                //ModPlayground.broadcastMessage("StationInSystem running");
+                //manager.chatDebug("StationInSystem running");
                 //cycle through list and compare each registered anchor stations system to input system
                 Vector3i xSys;
                 for (int i = 0; i < list.size(); i++) {
@@ -217,24 +213,24 @@ public class AnchorManager {
                         }
                         try {
                             xSys = list.get(i).getStationSystem();
-                            //ModPlayground.broadcastMessage("getting system for station " + stationUID);
-                            //ModPlayground.broadcastMessage("passed system: " + system.toString());
-                            //ModPlayground.broadcastMessage("xStation " + list.get(i).stationName + " sys" + xSys.toString());
+                            //manager.chatDebug("getting system for station " + stationUID);
+                            //manager.chatDebug("passed system: " + system.toString());
+                            //manager.chatDebug("xStation " + list.get(i).stationName + " sys" + xSys.toString());
                             // chatDebug(" comparing list system " + xSys + " to system " + system);
                             if ((xSys.x == system.x) && (xSys.y == system.y) && (system.z == xSys.z)) {
                                 //both systems have the same Vector -> its the same system
                                 return i;    //break from method
                             }
                         } catch (Exception e) {
-                            ModPlayground.broadcastMessage("station has system field = null");
-                            ModPlayground.broadcastMessage(e.toString());
+                            manager.chatDebug("station has system field = null");
+                            manager.chatDebug(e.toString());
                         }
 
 
 
                     } catch (Exception e) {
-                        ModPlayground.broadcastMessage("get system failed");
-                        ModPlayground.broadcastMessage(e.toString());
+                        manager.chatDebug("get system failed");
+                        manager.chatDebug(e.toString());
                     }
                 }
                 return -1;

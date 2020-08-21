@@ -53,7 +53,7 @@ public class IRNstationModule implements Serializable {
     }
 
     public IRNstationModule(IRNstationManager stationManagerManagerI, SegmentController stationI) { //constructor
-        ModPlayground.broadcastMessage("new station module created");
+        stationManager.chatDebug("new station module created");
         stationManager = stationManagerManagerI;
         stationSegmentController = stationI;
         type = StationTypes.DEFAULT;
@@ -94,28 +94,28 @@ public class IRNstationModule implements Serializable {
     }
 
     public void UpdateStats() {
-        //ModPlayground.broadcastMessage("setting station stats");
+        //stationManager.chatDebug("setting station stats");
         try {
             if (stationSegmentController != null) {
                 stationID = stationSegmentController.getId(); //TODO why do i have that field?
                 try {
                     factionID = stationSegmentController.getFactionId();
                 } catch (Exception e) {
-                    ModPlayground.broadcastMessage("failed to get faction ID");
-                    ModPlayground.broadcastMessage(e.toString());
+                    stationManager.chatDebug("failed to get faction ID");
+                    stationManager.chatDebug(e.toString());
                 }
                 stationName = stationSegmentController.getRealName();
                 stationUIDfull = stationSegmentController.getUniqueIdentifierFull();
                 stationUID = stationSegmentController.getUniqueIdentifier();
                 stationSector = stationSegmentController.getSector(new Vector3i());
                 stationSystem = stationSegmentController.getSystem(new Vector3i());
-                //ModPlayground.broadcastMessage("set stats for " + stationName);
+                //stationManager.chatDebug("set stats for " + stationName);
             } else {
 
             }
         } catch (Exception e) {
-            ModPlayground.broadcastMessage("update stats failed");
-            ModPlayground.broadcastMessage(e.toString());
+            stationManager.chatDebug("update stats failed");
+            stationManager.chatDebug(e.toString());
         }
     }
 

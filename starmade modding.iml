@@ -7,23 +7,18 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="StarMade" level="project" />
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="file://$USER_HOME$/Desktop/Starmade/StarMade" />
+          <root url="file://$USER_HOME$/Desktop/Starmade/StarMade/lib" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES />
-        <jarDirectory url="file://$USER_HOME$/Desktop/Starmade/StarMade" recursive="false" />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$USER_HOME$/Desktop/Starmade/mod/fastutil-8.4.1.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
+        <SOURCES>
+          <root url="file://$USER_HOME$/Desktop/Starmade/StarMade/lib" />
+        </SOURCES>
+        <jarDirectory url="file://$USER_HOME$/Desktop/Starmade/StarMade/lib" recursive="false" />
+        <jarDirectory url="file://$USER_HOME$/Desktop/Starmade/StarMade/lib" recursive="false" type="SOURCES" />
       </library>
     </orderEntry>
     <orderEntry type="module-library">

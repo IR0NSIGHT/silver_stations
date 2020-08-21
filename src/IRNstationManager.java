@@ -1,4 +1,5 @@
 import Events.EntityLoadedEvent;
+import api.DebugFile;
 import api.ModPlayground;
 import api.common.GameServer;
 import api.listener.Listener;
@@ -8,16 +9,9 @@ import api.listener.events.systems.InterdictionCheckEvent;
 import api.mod.StarLoader;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.controller.SegmentController;
-import org.schema.game.common.controller.elements.jumpprohibiter.InterdictionAddOn;
-import org.schema.game.common.data.ManagedSegmentController;
-import org.schema.game.common.data.blockeffects.config.EffectModule;
-import org.schema.game.common.data.blockeffects.config.StatusEffectType;
-import org.schema.game.common.data.player.PlayerState;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import org.schema.game.common.data.world.StellarSystem;
 import org.schema.game.common.data.world.Universe;
-import org.schema.game.server.controller.SectorSwitch;
-import org.schema.game.server.data.GameServerState;
 
 import java.io.*;
 import java.util.*;
@@ -29,8 +23,9 @@ public class IRNstationManager implements Serializable {
     public transient List<IRNstationModule> stations = null; //holds all station instances
     public transient AnchorManager anchorManager;
     public String filePath;
-
-    public IRNstationManager() {
+    public IRNCore modInstance;
+    public IRNstationManager(IRNCore modInstance) {
+        this.modInstance = modInstance;
         anchorManager = new AnchorManager(this);
         stationFileHandler fileHandler = new stationFileHandler(this);
         filePath = fileHandler.filePath;;
@@ -49,24 +44,24 @@ public class IRNstationManager implements Serializable {
             @Override
             public void onEvent(EntityLoadedEvent event) {
                 if (event.getSegmentController().getType() == SimpleTransformableSendableObject.EntityType.SPACE_STATION) {
-                    ModPlayground.broadcastMessage("station was loaded");
+                    chatDebug("station was loaded");
                     //check for existing stationfile
                     try {
                         String stationUID = event.getSegmentController().getUniqueIdentifier();
                         int idx = FindStationInList(stations, stationUID);
-                        //ModPlayground.broadcastMessage("idx of station is " + idx);
+                        //chatDebug("idx of station is " + idx);
                         if (idx != -1) { //already registered
                             //add segment controller to station object
                             stations.get(idx).setStationSegmentController(event.getSegmentController());
                         } else { //not yet registered
                             //create station object
-                            //ModPlayground.broadcastMessage("segmentcontroller is " + event.getSegmentController());
+                            //chatDebug("segmentcontroller is " + event.getSegmentController());
 
                             registerIRNstation(event.getSegmentController());
                         }
                     } catch (Exception e) {
-                        ModPlayground.broadcastMessage("entity loaded event listener failed");
-                        ModPlayground.broadcastMessage(e.toString());
+                        chatDebug("entity loaded event listener failed");
+                        chatDebug(e.toString());
                     }
 
                 }
@@ -295,9 +290,10 @@ public class IRNstationManager implements Serializable {
         ModPlayground.broadcastMessage(s);
     }
 
-    private void chatDebug(String s) {
-        if (false) {
-            ModPlayground.broadcastMessage("SM" + s);
+    public void chatDebug(String s) {
+        if (true) {
+            DebugFile.log((System.currentTimeMillis()/1000 + "SM" + s), modInstance);
+            //ModPlayground.broadcastMessage("SM" + s);
         }
     }
 

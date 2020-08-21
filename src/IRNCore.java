@@ -20,7 +20,7 @@ public class IRNCore extends StarMod {
     @Override
     public void onEnable() {
         EntityLoadEventLoop loop = new EntityLoadEventLoop();
-        stationManager = new IRNstationManager();
+        stationManager = new IRNstationManager(this);
         Debugger debugger = new Debugger(stationManager,stationManager.anchorManager);
     }
 }

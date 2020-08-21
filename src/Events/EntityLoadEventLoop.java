@@ -28,6 +28,7 @@ public class EntityLoadEventLoop{
             private ArrayList<StarEntity> oldLoadedEnts;
             @Override
             public void run() {
+
                 if (ServerState.isShutdown() || ServerState.isFlagShutdown()) {
                     this.cancel();
                 }

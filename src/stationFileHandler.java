@@ -1,3 +1,4 @@
+import api.DebugFile;
 import api.ModPlayground;
 import api.common.GameServer;
 import api.utils.StarRunnable;
@@ -26,7 +27,7 @@ public class stationFileHandler {
             @Override
             public void run() {
                 if (GameServer.getServerState() != null) {
-                    ModPlayground.broadcastMessage("file handle loop running at ------------" + System.currentTimeMillis()/1000);
+                    chatDebug("file handle loop running at ------------" + System.currentTimeMillis()/1000);
                     if (!hasReadFile) {
                         /**
                          * get all stations from the save file
@@ -47,9 +48,7 @@ public class stationFileHandler {
                     //write current station list to file -> update file
                     WriteFile(manager.stations);
                 }
-
             }
-
             public boolean WriteFile(List<IRNstationModule> stationsL) {  //create a savefile for the stations if it doesnt exist yet.
                 chatDebug("file creator was called");
                 FileOutputStream fos = null;
@@ -101,12 +100,11 @@ public class stationFileHandler {
                 return true;
             }
             private void chatDebug(String s) {
-                if (false) {
-                    ModPlayground.broadcastMessage(s);
+                if (true) {
+                    DebugFile.log(System.currentTimeMillis()/1000 + "" + s, manager.modInstance);
+                   // ModPlayground.broadcastMessage(s);
                 }
             }
-
-
         }.runTimer(25 * 5);
     }
 }
