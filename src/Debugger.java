@@ -109,6 +109,7 @@ public class Debugger {
     private void DebugStations(List<IRNstationModule> list) {
         ChatDebug("Listing all stations:");
         ChatDebug("List is null:" + (list == null));
+        ChatDebug("List has " + list.size() + "entries");
         for (int i = 0; i < list.size(); i++) {
             IRNstationModule station = list.get(i);
             ChatDebug("---------------------");
@@ -117,7 +118,10 @@ public class Debugger {
             ChatDebug("station type:--------" + station.type);
             String factionName = String.valueOf(station.factionID);
             try {
-                factionName = GameServer.getServerState().getFactionManager().getFaction(station.factionID).getName();
+                if (station.factionID != 0) {
+                    factionName = GameServer.getServerState().getFactionManager().getFaction(station.factionID).getName();
+                }
+
             } catch (Exception e) {
                 ChatDebug("faction name error");
                 ChatDebug(e.toString());

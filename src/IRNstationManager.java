@@ -44,26 +44,30 @@ public class IRNstationManager implements Serializable {
             @Override
             public void onEvent(EntityLoadedEvent event) {
                 if (event.getSegmentController().getType() == SimpleTransformableSendableObject.EntityType.SPACE_STATION) {
-                    chatDebug("station was loaded");
+                    chatDebug("station was loaded: " + event.getSegmentController().getUniqueIdentifier());
                     //check for existing stationfile
                     try {
                         String stationUID = event.getSegmentController().getUniqueIdentifier();
+                        chatDebug("station UID is " + stationUID);
                         int idx = FindStationInList(stations, stationUID);
-                        //chatDebug("idx of station is " + idx);
+                        chatDebug("station find in list idx is " + idx);
+
                         if (idx != -1) { //already registered
                             //add segment controller to station object
                             stations.get(idx).setStationSegmentController(event.getSegmentController());
+                            chatDebug("set stations segment controller");
                         } else { //not yet registered
                             //create station object
                             //chatDebug("segmentcontroller is " + event.getSegmentController());
-
+                            chatDebug("station SC == null: " + (event.getSegmentController() == null));
                             registerIRNstation(event.getSegmentController());
+                            chatDebug("registered new station");
                         }
                     } catch (Exception e) {
                         chatDebug("entity loaded event listener failed");
                         chatDebug(e.toString());
                     }
-
+                    chatDebug("entity loaded event done -----------");
                 }
             }
         });
@@ -201,6 +205,7 @@ public class IRNstationManager implements Serializable {
     }
 
     private void registerIRNstation(SegmentController station) {
+        chatDebug("registerIRNstation called");
         IRNstationModule newStation = new IRNstationModule(this, station);
     }
 

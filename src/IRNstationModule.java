@@ -40,21 +40,11 @@ public class IRNstationModule implements Serializable {
     private int[] stationSystemArr;
     private static final long serialVersionUID = 964380174990140560L;  //cp from game error log, might need to update on version change.
 
-    public IRNstationModule(IRNstationManager stationManagerManagerI, SimpleTransformableSendableObject stationI) { //constructor
-        stationManager = stationManagerManagerI;
-        stationSegmentController = (SegmentController) stationI;
-        type = StationTypes.DEFAULT;
-        UpdateStats();
-
-        stationSectorArr = V3itoArr(stationSector);
-        stationSystemArr = V3itoArr(stationSystem);
-
-        stationManager.stations.add(this);
-    }
 
     public IRNstationModule(IRNstationManager stationManagerManagerI, SegmentController stationI) { //constructor
-        stationManager.chatDebug("new station module created");
+
         stationManager = stationManagerManagerI;
+        stationManager.chatDebug("IRNstationModule constructor called");
         stationSegmentController = stationI;
         type = StationTypes.DEFAULT;
         UpdateStats();

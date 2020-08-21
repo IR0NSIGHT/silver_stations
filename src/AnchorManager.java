@@ -1,10 +1,12 @@
 import api.common.GameServer;
+import api.entity.Ship;
 import api.listener.Listener;
 import api.listener.events.ShipJumpEngageEvent;
 import api.mod.StarLoader;
 import api.utils.StarRunnable;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.controller.elements.jumpdrive.JumpAddOn;
 import org.schema.game.common.controller.elements.jumpprohibiter.InterdictionAddOn;
 import org.schema.game.common.data.ManagedSegmentController;
 import org.schema.game.common.data.blockeffects.config.EffectModule;
@@ -276,6 +278,13 @@ public class AnchorManager {
             //queue new jump to anchor station
 
             Vector3i jumpTo = anchor.getStationSector(); //target sector (no distance limit set)
+            //TODO discharge jump addon -> otherwise can teleport in wierd ways again an again bc on cancel position is slightly changed
+            //get shipmanagercontainer -> get .getJumpaddon()
+            Ship starShip = new Ship(ship);
+            starShip.getShipManagerContainer().getJumpAddOn().dischargeFully();
+            starShip.getShipManagerContainer().getJumpAddOn().sendChargeUpdate();
+            //JumpAddOn addon = new JumpAddOn();
+            //addon.dischargeFully();
 
             ship.getNetworkObject().graphicsEffectModifier.add((byte) 1); //TODO get graphic effect to work
             SectorSwitch sectorSwitch = ((GameServerState) ship.getState()).getController().queueSectorSwitch(ship, jumpTo, 1, false, true, true);
