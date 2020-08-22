@@ -107,14 +107,15 @@ public class Debugger {
 
     }
     private void DebugStations(List<IRNstationModule> list) {
-        ChatDebug("Listing all stations:");
+        ChatDebug("-----------Listing all stations:-----------------------");
         ChatDebug("List is null:" + (list == null));
         ChatDebug("List has " + list.size() + "entries");
         for (int i = 0; i < list.size(); i++) {
             IRNstationModule station = list.get(i);
-            ChatDebug("---------------------");
+            ChatDebug("---------------------------------------------------");
             ChatDebug("station UID: --------" + station.stationUID);
             ChatDebug("station sector: -----" + station.getStationSector());
+            ChatDebug("station system: -----" + station.getStationSystem());
             ChatDebug("station type:--------" + station.type);
             String factionName = String.valueOf(station.factionID);
             try {
@@ -129,5 +130,6 @@ public class Debugger {
             ChatDebug("faction name:--------" + factionName);
 
         }
+        ChatDebug("-------------------------------------------------------");
     };
 }

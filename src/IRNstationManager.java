@@ -14,6 +14,7 @@ import org.schema.game.common.data.world.StellarSystem;
 import org.schema.game.common.data.world.Universe;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class IRNstationManager implements Serializable {
@@ -297,7 +298,11 @@ public class IRNstationManager implements Serializable {
 
     public void chatDebug(String s) {
         if (true) {
-            DebugFile.log((System.currentTimeMillis()/1000 + "SM" + s), modInstance);
+
+            SimpleDateFormat formatter = new SimpleDateFormat ("dd-MM-yyyy 'at' HH:mm:ss z");
+            Date date = new Date(System.currentTimeMillis());
+            String timeStamp = formatter.format(date);
+            DebugFile.log((timeStamp + " -- sysMan -- " + s), modInstance);
             //ModPlayground.broadcastMessage("SM" + s);
         }
     }

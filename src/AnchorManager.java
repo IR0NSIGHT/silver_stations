@@ -1,3 +1,4 @@
+import api.ModPlayground;
 import api.common.GameServer;
 import api.entity.Ship;
 import api.listener.Listener;
@@ -6,11 +7,13 @@ import api.mod.StarLoader;
 import api.utils.StarRunnable;
 import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.controller.elements.RecharchableActivatableDurationSingleModule;
 import org.schema.game.common.controller.elements.jumpdrive.JumpAddOn;
 import org.schema.game.common.controller.elements.jumpprohibiter.InterdictionAddOn;
 import org.schema.game.common.data.ManagedSegmentController;
 import org.schema.game.common.data.blockeffects.config.EffectModule;
 import org.schema.game.common.data.blockeffects.config.StatusEffectType;
+import org.schema.game.common.data.player.faction.Faction;
 import org.schema.game.common.data.world.SimpleTransformableSendableObject;
 import org.schema.game.server.controller.SectorSwitch;
 import org.schema.game.server.data.GameServerState;
@@ -42,91 +45,96 @@ public class AnchorManager {
 
             @Override
             public void run() {
-                try {
-                    manager.chatDebug ("anchor loop at --------" + System.currentTimeMillis()/1000 + "-------------------");
-                    for (int i = 0; i < stationManager.stations.size(); i++) {
-                        //check if has segment controller
-                        IRNstationModule station = stationManager.stations.get(i);
-                        //check is station is still existing on server
+                if (GameServer.getServerState() != null) {
+                   // ModPlayground.broadcastMessage("Universe name is" + GameServer.getUniverse().getName());
 
-                        boolean isExist = GameServer.getServerState().existsEntity(SimpleTransformableSendableObject.EntityType.SPACE_STATION,station.stationName);
-                        if (!isExist) {
-                            //TODO isExists gives false negatives.
-                            manager.chatDebug("station " + station.stationName + "does not exist on server. purge from lists.");
-                            //manager.chatDebug("station is entity type " + station.getstationSegmentController().getType());
-                            //remove dead stations from anchors and stations list. -> garbage collector will kill instances
-                           int idx = manager.FindStationInList(anchors,station.stationUID);
-                           if (idx != -1) {
-                               //remove dead station from list
-                               anchors.remove(idx);
-                           }
-                            idx = manager.FindStationInList(manager.stations,station.stationUID);
-                            if (idx != -1) {
-                                //remove dead station from list
-                                manager.stations.remove(idx);
-                            }
-                            continue;
-                        }
+                    try {
+                        manager.chatDebug ("anchor loop at --------" + System.currentTimeMillis()/1000 + "-------------------");
+                        for (int i = 0; i < stationManager.stations.size(); i++) {
+                            //check if has segment controller
+                            IRNstationModule station = stationManager.stations.get(i);
+                            //check is station is still existing on server
 
-                        //manager.chatDebug("station is: " + station.stationName);
-                        if (station.getstationSegmentController() != null) {
-                            //manager.chatDebug("anchor manager checking conditions");
-                            //manager.chatDebug("station has segment controller");
-                            station.UpdateStats();
-                            //check for anchor properties
-                            boolean allowAnchor = AllowAnchor(station);
-                            if (allowAnchor) {
-                                station.setType(IRNstationModule.StationTypes.ANCHOR);
-                            } else {
-                                if (station.type == IRNstationModule.StationTypes.ANCHOR) {
-                                    station.setType(IRNstationModule.StationTypes.DEFAULT);
+                            boolean isExist = GameServer.getServerState().existsEntity(SimpleTransformableSendableObject.EntityType.SPACE_STATION,station.stationName);
+                            if (!isExist) {
+                                //TODO isExists gives false negatives.
+                                manager.chatDebug("station " + station.stationName + "does not exist on server. purge from lists.");
+                                //manager.chatDebug("station is entity type " + station.getstationSegmentController().getType());
+                                //remove dead stations from anchors and stations list. -> garbage collector will kill instances
+                                int idx = manager.FindStationInList(anchors,station.stationUID);
+                                if (idx != -1) {
+                                    //remove dead station from list
+                                    anchors.remove(idx);
                                 }
+                                idx = manager.FindStationInList(manager.stations,station.stationUID);
+                                if (idx != -1) {
+                                    //remove dead station from list
+                                    manager.stations.remove(idx);
+                                }
+                                continue;
                             }
-                            //manager.chatDebug("station allowed anchor: " + allowAnchor);
-                            //manager.chatDebug("checking anchors list for station");
-                            //check if in anchors
-                            int idx = manager.FindStationInList(anchors, station.stationUID);
-                            //manager.chatDebug("station at idx in anchors: " + idx);
-                            if (allowAnchor && idx == -1) {
-                                /** station has anchor capability and is not in anchors list
-                                 *
-                                 */
-                                manager.chatDebug("adding station to anchors: " + station.stationName);
-                                anchors.add(station);
 
-                            }
-                            if (!allowAnchor && idx != -1) {
-                                /**
-                                 * station is in list but has NO anchor capability
-                                 */
-                                manager.chatDebug("removing station from anchors: " + station.stationName);
-                                anchors.remove(idx);
-
-                            }
-                        } else {
-                            //no segment controller -> not loaded
-                            int idx = manager.FindStationInList(anchors, station.stationUID);
-                            if (station.type == IRNstationModule.StationTypes.ANCHOR) {
+                            //manager.chatDebug("station is: " + station.stationName);
+                            if (station.getstationSegmentController() != null) {
+                                //manager.chatDebug("anchor manager checking conditions");
+                                //manager.chatDebug("station has segment controller");
+                                station.UpdateStats();
+                                //check for anchor properties
+                                boolean allowAnchor = AllowAnchor(station);
+                                if (allowAnchor) {
+                                    station.setType(IRNstationModule.StationTypes.ANCHOR);
+                                } else {
+                                    if (station.type == IRNstationModule.StationTypes.ANCHOR) {
+                                        station.setType(IRNstationModule.StationTypes.DEFAULT);
+                                    }
+                                }
+                                //manager.chatDebug("station allowed anchor: " + allowAnchor);
+                                //manager.chatDebug("checking anchors list for station");
+                                //check if in anchors
+                                int idx = manager.FindStationInList(anchors, station.stationUID);
                                 //manager.chatDebug("station at idx in anchors: " + idx);
-                                if (idx == -1) {
+                                if (allowAnchor && idx == -1) {
                                     /** station has anchor capability and is not in anchors list
                                      *
                                      */
-                                    manager.chatDebug("adding unloaded station to anchors: " + station.stationName);
+                                    manager.chatDebug("adding station to anchors: " + station.stationName);
                                     anchors.add(station);
+
+                                }
+                                if (!allowAnchor && idx != -1) {
+                                    /**
+                                     * station is in list but has NO anchor capability
+                                     */
+                                    manager.chatDebug("removing station from anchors: " + station.stationName);
+                                    anchors.remove(idx);
+
                                 }
                             } else {
-                                if (idx != -1) {
-                                    manager.chatDebug("removing unloaded station from anchors");
-                                    anchors.remove(idx);
+                                //no segment controller -> not loaded
+                                int idx = manager.FindStationInList(anchors, station.stationUID);
+                                if (station.type == IRNstationModule.StationTypes.ANCHOR) {
+                                    //manager.chatDebug("station at idx in anchors: " + idx);
+                                    if (idx == -1) {
+                                        /** station has anchor capability and is not in anchors list
+                                         *
+                                         */
+                                        manager.chatDebug("adding unloaded station to anchors: " + station.stationName);
+                                        anchors.add(station);
+                                    }
+                                } else {
+                                    if (idx != -1) {
+                                        manager.chatDebug("removing unloaded station from anchors");
+                                        anchors.remove(idx);
+                                    }
                                 }
                             }
                         }
+                    } catch (Exception e) {
+                        manager.chatDebug("anchor manager update loop failed");
+                        manager.chatDebug(e.toString());
                     }
-                } catch (Exception e) {
-                    manager.chatDebug("anchor manager update loop failed");
-                    manager.chatDebug(e.toString());
                 }
+
 
                 //get all stations with a segment controller
 
@@ -141,6 +149,7 @@ public class AnchorManager {
                 boolean systemIsFree = true;
                 boolean ownsSystem = true;
                 boolean stationHasInhibitor = true; //TODO check if station has inhibitor chambers
+                boolean notOverheating = true;
                 boolean isNotHomebase = true; //TODO add check for homebase
                 String failMessage = "";
                 //TODO feedback messages directly to player, not on serverchat.
@@ -153,6 +162,7 @@ public class AnchorManager {
                 //manager.chatDebug("AA: checking for ownership of system");
                 try {
                     Vector3i sector = stationModule.getStationSector();
+
                     if (manager.GetSystem(sector).getOwnerFaction() != station.getFactionId() || station.getFactionId() == 0 || manager.GetSystem(sector).getOwnerFaction() == 0) {
                         /**
                          *  compares system ownership to stations faction
@@ -161,6 +171,15 @@ public class AnchorManager {
                         ownsSystem = false;
                         failMessage += "your faction does not own this system. ";
                     }
+                    /**station homebase check
+                     *
+                     */
+                    Faction faction = GameServer.getServerState().getFactionManager().getFaction(station.getFactionId());
+                    if (faction.getHomebaseUID().equals(stationUID)) {
+                        isNotHomebase = false;
+                        failMessage += "station is faction homebase. ";
+                    }
+
                 } catch (Exception e) {
                     manager.chatDebug("failed to check system ownership");
                     manager.chatDebug(e.toString());
@@ -174,16 +193,29 @@ public class AnchorManager {
                     stationHasInhibitor = false;
                     failMessage += "station does not have a inhibitor installed. ";
                 }
-                //TODO add homebase check
-                if (systemIsFree && ownsSystem && stationHasInhibitor && isNotHomebase) {
+                if (station.isCoreOverheating()) {
+                    notOverheating = false;
+                    failMessage += "station is overheating. ";
+                }
+
+                if (systemIsFree && ownsSystem && stationHasInhibitor && notOverheating && isNotHomebase) {
                     return true;
                 }
-                //manager.chatDebug(failMessage);
+
+                manager.chatDebug(failMessage);
                 return false;
             }
             private boolean hasAddon (SegmentController station, StatusEffectType addon){
                 ManagedSegmentController myMSC = (ManagedSegmentController) station;
                 InterdictionAddOn interdictionAddOn = myMSC.getManagerContainer().getInterdictionAddOn();
+                RecharchableActivatableDurationSingleModule interdictionSimpleAddon = (RecharchableActivatableDurationSingleModule) interdictionAddOn;
+                interdictionAddOn.sendChargeUpdate();
+                boolean canExecute = interdictionAddOn.canExecute();
+                if (!canExecute) {
+                    return false;
+                }
+                //ModPlayground.broadcastMessage("station " + station.getName() + " can execute interdictor: " + canExecute);
+
                 List<EffectModule> moduleList = interdictionAddOn.getConfigManager().getModulesList();
                 String val = "";
                 for (int i = 0; i < moduleList.size(); i++) {
@@ -278,15 +310,17 @@ public class AnchorManager {
             //queue new jump to anchor station
 
             Vector3i jumpTo = anchor.getStationSector(); //target sector (no distance limit set)
-            //TODO discharge jump addon -> otherwise can teleport in wierd ways again an again bc on cancel position is slightly changed
-            //get shipmanagercontainer -> get .getJumpaddon()
-            Ship starShip = new Ship(ship);
+
+            Ship starShip = new Ship(ship); //TODO remove dependency to star api
             starShip.getShipManagerContainer().getJumpAddOn().dischargeFully();
             starShip.getShipManagerContainer().getJumpAddOn().sendChargeUpdate();
             //JumpAddOn addon = new JumpAddOn();
             //addon.dischargeFully();
 
-            ship.getNetworkObject().graphicsEffectModifier.add((byte) 1); //TODO get graphic effect to work
+            ship.sendControllingPlayersServerMessage(new Object[]{"WARNING:  JUMP ABORTED - ANCHOR DETECTED!"},3);
+
+
+            ship.getNetworkObject().graphicsEffectModifier.add((byte) 1); //TODO get graphic effect to work at correct time
             SectorSwitch sectorSwitch = ((GameServerState) ship.getState()).getController().queueSectorSwitch(ship, jumpTo, 1, false, true, true);
         }
     }
